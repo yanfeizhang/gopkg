@@ -30,11 +30,17 @@ import (
 var (
 	spanCache            = span.NewSpanCache(1024 * 1024)
 	spanCacheEnable bool = false
+	zeroCopyEnable  bool = false
 )
 
 // SetSpanCache enable/disable binary protocol bytes/string allocator
 func SetSpanCache(enable bool) {
 	spanCacheEnable = enable
+}
+
+// SetZeroCopy enable/disable binary protocol bytes/string zero copy
+func SetZeroCopy(enable bool) {
+	zeroCopyEnable = enable
 }
 
 var Binary BinaryProtocol
@@ -356,6 +362,8 @@ func (p BinaryProtocol) ReadBinary(buf []byte) (b []byte, l int, err error) {
 	}
 	if spanCacheEnable {
 		b = spanCache.Copy(buf[4:l])
+	} else if zeroCopyEnable {
+		b = ZeroCopyBytesToBytes(buf, 4)
 	} else {
 		b = []byte(string(buf[4:l]))
 	}
@@ -377,23 +385,32 @@ func (p BinaryProtocol) ReadString(buf []byte) (s string, l int, err error) {
 	if spanCacheEnable {
 		data := spanCache.Copy(buf[4:l])
 		s = unsafex.BinaryToString(data)
+	} else if zeroCopyEnable {
+		s = ZeroCopyBytesToString(buf, 4)
 	} else {
-		//s = string(buf[4:l])
-		s = BytesToString(buf, 4)
+		s = string(buf[4:l])
 	}
 	return s, l, nil
 }
 
-func BytesToString(b []byte, offset int) string {
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+// ZeroCopyBytesToBytes: zero copy []byte->[]byte
+func ZeroCopyBytesToBytes(s []byte, offset int) []byte {
+	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&s))
+	newSliceHeader := reflect.SliceHeader{
+		Data: sliceHeader.Data + uintptr(offset),
+		Len:  sliceHeader.Len - offset,
+		Cap:  sliceHeader.Cap - offset,
+	}
+	return *(*[]byte)(unsafe.Pointer(&newSliceHeader))
+}
 
-	// 构造字符串的底层结构，复用切片的Data和Len
+// ZeroCopyBytesToString: zero copy []byte->string
+func ZeroCopyBytesToString(b []byte, offset int) string {
+	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	strHeader := reflect.StringHeader{
 		Data: sliceHeader.Data + uintptr(offset),
 		Len:  sliceHeader.Len - offset,
 	}
-
-	// 将字符串结构指针转换为string
 	return *(*string)(unsafe.Pointer(&strHeader))
 }
 
