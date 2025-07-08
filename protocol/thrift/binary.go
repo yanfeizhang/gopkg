@@ -363,7 +363,7 @@ func (p BinaryProtocol) ReadBinary(buf []byte) (b []byte, l int, err error) {
 	if spanCacheEnable {
 		b = spanCache.Copy(buf[4:l])
 	} else if zeroCopyEnable {
-		b = ZeroCopyBytesToBytes(buf, 4)
+		b = ZeroCopyBytesToBytes(buf[4:l])
 	} else {
 		b = []byte(string(buf[4:l]))
 	}
@@ -386,32 +386,32 @@ func (p BinaryProtocol) ReadString(buf []byte) (s string, l int, err error) {
 		data := spanCache.Copy(buf[4:l])
 		s = unsafex.BinaryToString(data)
 	} else if zeroCopyEnable {
-		s = ZeroCopyBytesToString(buf, 4)
+		s = ZeroCopyBytesToString(buf[4:l])
 	} else {
 		s = string(buf[4:l])
 	}
 	return s, l, nil
 }
 
-// ZeroCopyBytesToBytes: zero copy []byte->[]byte
-func ZeroCopyBytesToBytes(s []byte, offset int) []byte {
-	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&s))
-	newSliceHeader := reflect.SliceHeader{
-		Data: sliceHeader.Data + uintptr(offset),
-		Len:  sliceHeader.Len - offset,
-		Cap:  sliceHeader.Cap - offset,
-	}
-	return *(*[]byte)(unsafe.Pointer(&newSliceHeader))
-}
-
 // ZeroCopyBytesToString: zero copy []byte->string
-func ZeroCopyBytesToString(b []byte, offset int) string {
+func ZeroCopyBytesToString(b []byte) string {
 	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&b))
 	strHeader := reflect.StringHeader{
-		Data: sliceHeader.Data + uintptr(offset),
-		Len:  sliceHeader.Len - offset,
+		Data: sliceHeader.Data,
+		Len:  sliceHeader.Len,
 	}
 	return *(*string)(unsafe.Pointer(&strHeader))
+}
+
+// ZeroCopyBytesToBytes: zero copy []byte->[]byte
+func ZeroCopyBytesToBytes(s []byte) []byte {
+	sliceHeader := (*reflect.SliceHeader)(unsafe.Pointer(&s))
+	newSliceHeader := reflect.SliceHeader{
+		Data: sliceHeader.Data,
+		Len:  sliceHeader.Len,
+		Cap:  sliceHeader.Len,
+	}
+	return *(*[]byte)(unsafe.Pointer(&newSliceHeader))
 }
 
 func (BinaryProtocol) ReadBool(buf []byte) (v bool, l int, err error) {
