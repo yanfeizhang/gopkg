@@ -37,3 +37,11 @@ func StringToBinary(s string) (b []byte) {
 	(*sliceHeader)(unsafe.Pointer(&b)).Cap = len(s)
 	return
 }
+
+// BinaryToBinary converts []byte to []byte without copy
+func BinaryToBinary(b []byte) (r []byte) {
+	*(*[]byte)(unsafe.Pointer(&r)) = b
+	(*sliceHeader)(unsafe.Pointer(&r)).Len = len(b)
+	(*sliceHeader)(unsafe.Pointer(&r)).Cap = len(b)
+	return
+}

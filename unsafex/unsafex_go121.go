@@ -39,3 +39,8 @@ func BinaryToString(b []byte) string {
 func StringToBinary(s string) []byte {
 	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
+
+// BinaryToString converts []byte to []byte without copy
+func BinaryToBinary(b []byte) []byte {
+	return unsafe.Slice(unsafe.SliceData(b), len(b))
+}
