@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
-	"reflect"
 	"unsafe"
 
 	"github.com/bytedance/gopkg/lang/span"
