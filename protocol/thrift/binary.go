@@ -384,8 +384,8 @@ func (p BinaryProtocol) ReadString(buf []byte) (s string, l int, err error) {
 	if spanCacheEnable {
 		data := spanCache.Copy(buf[4:l])
 		s = unsafex.BinaryToString(data)
-		//} else if zeroCopyEnable {
-		//	s = unsafex.BinaryToString(buf[4:l])
+	} else if zeroCopyEnable {
+		s = unsafex.BinaryToString(buf[4:l])
 	} else {
 		s = string(buf[4:l])
 	}
